@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import unittest
 import requests
+import re
 
 #########
 ## Instr note: the outline comments will stay as suggestions, otherwise it's too difficult.
@@ -13,9 +14,36 @@ import requests
 ######### PART 0 #########
 
 # Write your code for Part 0 here.
+try:
+	gallery_data = open("gallery.html","r", encoding='utf-8').read()
+except:
+	gallery_data = requests.get("http://newmantaylor.com/gallery.html").text
+	f = open("gallery.html","w",encoding = "utf-8")
+	f.write(gallery_data)
+	f.close
+
+soup_gallery = BeautifulSoup(gallery_data, "html.parser")
+# print (soup)
+
+all_imgs = soup_gallery.find_all("img")
+# for i in all_imgs:
+# 	print(i.get("alt","No alternative text provided!"))
+
 
 
 ######### PART 1 #########
+
+try:
+	nps_gov_data = open("nps_gov_data.html","r",encoding = "utf-8").read()
+except:
+	nps_gov_data = requests.get("https://www.nps.gov/index.htm").text
+	f = open("nps_gov_data.html","w",encoding = "utf-8")
+	f.write(nps_gov_data)
+	f.close
+ 
+home_page = "https://www.nps.gov"
+
+
 
 # Get the main page data...
 
@@ -27,8 +55,35 @@ import requests
 
 # We've provided comments to guide you through the complex try/except, but if you prefer to build up the code to do this scraping and caching yourself, that is OK.
 
+try:
+	arkansas_data = open("arkansas_data.html","r",encoding = "utf-8").read()
+	california_data = open("california_data.html","r",encoding = "utf-8").read()
+	michigan_data = open("michigan_data.html","r",encoding ="utf-8").read()
+except:
+	soup_nps = BeautifulSoup(nps_gov_data,"html.parser")
+	state_one = soup_nps.find("ul", class_ = "dropdown-menu")
+	li_list = state_one.find_all("a")
+	all_links = [x["href"] for x in li_list]
+	pattern = re.compile(r'ar|ca|mi')
+	specific_links = []
+	for i in all_links:
+		find = pattern.search(i)
+		if find:
+			specific_links.append(i)
+	# print (home_page+specific_links[0])
 
-
+	arkansas_data = requests.get(home_page + specific_links[0]).text
+	f = open("arkansas_data.html","w",encoding = "utf-8")
+	f.write(arkansas_data)
+	f.close()
+	california_data = requests.get(home_page + specific_links[1]).text
+	f = open("california_data.html","w", encoding = "utf-8")
+	f.write(california_data)
+	f.close()
+	michigan_data = requests.get(home_page + specific_links[2]).text
+	f = open("michigan_data.html","w", encoding = "utf-8")
+	f.write(michigan_data)
+	f.close()
 
 
 
@@ -76,6 +131,7 @@ import requests
 
 ######### PART 2 #########
 
+
 ## Before truly embarking on Part 2, we recommend you do a few things:
 
 # - Create BeautifulSoup objects out of all the data you have access to in variables from Part 1
@@ -91,12 +147,107 @@ import requests
 
 # Remember that there are things you'll have to be careful about listed in the instructions -- e.g. if no type of park/site/monument is listed in input, one of your instance variables should have a None value...
 
+# soup_state = BeautifulSoup(arkansas_data,"html.parser")
+# clearfix_one = soup_state.find("li",class_ = "clearfix")
+# print (clearfix_one)
+# Name = clearfix_one.find("a").text
+# print (Name)
+# location = clearfix_one.find("h4").text
+# print (location)
+# type_ = clearfix_one.find("h1231232")
+# if not type_:
+# 	type_ = 1
+# print(type_)
+# description = clearfix_one.find("p").text
+# print(description.strip())
+# li_list = clearfix_one.find_all("a")
+# link = clearfix_one.find_all("a")[2]["href"]
+# print(link)
 
+# basic_info_data1 = requests.get(link).text
+# basic_info_bs = BeautifulSoup(basic_info_data1,"html.parser")
+# address = basic_info_bs.find("div",class_ = "physical-address")
+# # print (address)
+# streetAddress = address.find("span",itemprop = "streetAddress").text.strip()
+# print (streetAddress)
+# addressLocality = address.find("span",itemprop = "addressLocality")
+# print (addressLocality.text)
+# addressRegion = address.find("span",itemprop = "addressRegion")
+# print (addressRegion.text)
+# postalCode = address.find("span",itemprop = "postalCode")
+# print (postalCode.text)
+# # list1 = []
+# # for x in span_items:
+# # 	list1.append(x.text)
+# # print (list1)
 
 
 
 ## Define your class NationalSite here:
 
+class NationalSite(object):
+
+	def __init__(self, nationalsite):
+		self.nationalsite = nationalsite
+		if nationalsite.find("h4"):
+			self.location = nationalsite.find("h4").text
+		else:
+			self.location = None
+		self.name = nationalsite.find("a").text
+		if nationalsite.find("h2"):
+			self.type = nationalsite.find("h2").text
+		else:
+			self.type = None
+		if nationalsite.find("p"): 
+			self.description =nationalsite.find("p").text.strip()
+		else:
+			self.description = ""
+
+	def __str__(self):
+		return "{} | {}".format(self.name,self.location)
+
+	def get_mailing_address(self):
+		if self.nationalsite:
+			try:
+				basic_info = open (self.name + ".html","r",encoding = "uft-8").read()
+			except:
+				basic_link = self.nationalsite.find_all("a")[2]["href"]
+				basic_info = requests.get(basic_link).text
+				f = open(self.name + ".html","w",encoding='utf-8')
+				f.write(basic_info)
+				f.close()
+
+			basic_info_bs = BeautifulSoup(basic_info,"html.parser")
+			if self.name != "Death Valley":
+				if basic_info_bs.find("div",class_ = "mailing-address"):
+					address = basic_info_bs.find("div",class_ = "mailing-address")
+					if address.find("span",itemprop = "streetAddress"):
+						streetAddress = address.find("span",itemprop = "streetAddress").text.strip()
+					else:
+						return None
+					addressLocality = address.find("span",itemprop = "addressLocality").text.strip()
+					addressRegion = address.find("span",itemprop = "addressRegion").text.strip()
+					postalCode = address.find("span",itemprop = "postalCode").text.strip()
+					return "{}\{}\{}\{}".format(streetAddress,addressLocality,addressRegion,postalCode)
+				else:
+					return ""
+			else:
+				address = basic_info_bs.find("div",class_ = "mailing-address")
+				streetAddress = address.find("p",class_ ="adr").text.strip()[0:12]
+				addressLocality = address.find("span",itemprop = "addressLocality").text.strip()
+				addressRegion = address.find("span",itemprop = "addressRegion").text.strip()
+				postalCode = address.find("span",itemprop = "postalCode").text.strip()
+				return "{}\{}\{}\{}".format(streetAddress,addressLocality,addressRegion,postalCode)				
+
+		else:
+			return None
+
+	def __contains__(self, park_name):
+		result = park_name in self.name
+		return result
+
+	def return_for_csv(self):
+		return '"{}","{}","{}","{}","{}"\n'.format(self.name,self.location,self.type,self.get_mailing_address(),self.description)
 
 
 
@@ -106,10 +257,64 @@ import requests
 # f = open("sample_html_of_park.html",'r')
 # soup_park_inst = BeautifulSoup(f.read(), 'html.parser') # an example of 1 BeautifulSoup instance to pass into your class
 # sample_inst = NationalSite(soup_park_inst)
+# print (str(sample_inst))
 # f.close()
 
 
 ######### PART 3 #########
+
+
+# soup_state = BeautifulSoup(arkansas_data,"html.parser")
+# clearfix_one = soup_state.find_all("li",class_ = "clearfix")
+# print (clearfix_one[1])
+
+arkansas_natl_sites = []
+california_natl_sites = []
+michigan_natl_sites = []
+
+arkansas_bs = BeautifulSoup(arkansas_data,"html.parser")
+arkansas_li = arkansas_bs.find_all(lambda tag: tag.name == 'li' and tag.get('class') == ['clearfix'])
+for item in arkansas_li:
+	arkansas_natl_sites.append(NationalSite(item))
+
+
+califoria_bs = BeautifulSoup(california_data,"html.parser")
+california_li = califoria_bs.find_all(lambda tag: tag.name == 'li' and tag.get('class') == ['clearfix'])
+for item in california_li:
+	california_natl_sites.append(NationalSite(item))
+
+michigan_bs = BeautifulSoup(michigan_data,"html.parser")
+michigan_li = michigan_bs.find_all(lambda tag: tag.name == 'li' and tag.get('class') == ['clearfix'])
+for item in michigan_li:
+	michigan_natl_sites.append(NationalSite(item))
+
+with open("arkansas.csv","w", encoding = "utf-8") as arkansas_file:
+	arkansas_file.write('"Name","Location","Type","Address","Description"\n')
+	for i in range (len(arkansas_natl_sites)):
+		# print (arkansas_natl_sites[i])
+		cont_str = arkansas_natl_sites[i].return_for_csv()
+		# print (cont_str)
+		arkansas_file.write(cont_str)
+
+with open("california.csv","w",encoding = "utf-8") as california_file:
+	california_file.write('"Name","Location","Type","Address","Description"\n')
+	for i in range (len(california_natl_sites)):
+		# print (arkansas_natl_sites[i])
+		cont_str = california_natl_sites[i].return_for_csv()
+		# print (cont_str)
+		california_file.write(cont_str)
+
+with open("michigan.csv","w", encoding = "utf-8") as michigan_file:
+	michigan_file.write('"Name","Location","Type","Address","Description"\n')
+	for i in range (len(michigan_natl_sites)):
+		# print (arkansas_natl_sites[i])
+		cont_str = michigan_natl_sites[i].return_for_csv()
+		# print (cont_str)
+		michigan_file.write(cont_str)
+
+
+
+
 
 # Create lists of NationalSite objects for each state's parks.
 

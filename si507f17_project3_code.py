@@ -26,8 +26,8 @@ soup_gallery = BeautifulSoup(gallery_data, "html.parser")
 # print (soup)
 
 all_imgs = soup_gallery.find_all("img")
-# for i in all_imgs:
-# 	print(i.get("alt","No alternative text provided!"))
+for i in all_imgs:
+	print(i.get("alt","No alternative text provided!"))
 
 
 
